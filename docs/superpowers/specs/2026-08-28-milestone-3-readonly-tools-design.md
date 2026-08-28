@@ -1,41 +1,41 @@
-# Milestone 3 Read-Only Tools Design
+# 里程碑 3：任务状态和只读工具设计
 
-## Goal
+## 目标
 
-Add task state and read-only workspace tools so CodePilot can inspect project files through a controlled Agent loop instead of guessing repository contents.
+加入任务状态和只读工作区工具，让 CodePilot 可以通过受控 Agent 循环检查项目文件，而不是在不了解仓库内容的情况下猜测。
 
-## Scope
+## 范围
 
-This milestone covers:
+本里程碑包含：
 
-- `TaskState` with goal, plan, current step, and status.
-- Dynamic `/status` and `/plan` output.
-- Workspace path containment.
-- Ignored directories for file listing and search.
-- `list_files` read-only tool.
-- `read_file` read-only tool.
-- `search_text` read-only tool.
-- `ToolRegistry`.
-- JSON tool request parsing in `ConversationAgent`.
-- Tool result events in session JSONL.
+- 包含目标、计划、当前步骤和状态的 `TaskState`。
+- 动态 `/status` 和 `/plan` 输出。
+- 工作区路径范围限制。
+- 文件列表和搜索时忽略常见目录。
+- 只读工具 `list_files`。
+- 只读工具 `read_file`。
+- 只读工具 `search_text`。
+- `ToolRegistry`。
+- `ConversationAgent` 解析 JSON 工具请求。
+- 会话 JSONL 记录工具结果事件。
 
-This milestone does not implement write tools, shell execution, user approvals, streaming, project instruction files, or session resume.
+本里程碑不包含写入工具、shell 执行、用户审批、流式输出、项目指令文件，或恢复历史会话。
 
-## Architecture
+## 架构
 
-`Workspace` in `src/codepilot/workspace.py` is the only object allowed to resolve local paths. Read-only tools depend on `Workspace`, and `ToolRegistry` is the only execution surface the agent uses.
+`src/codepilot/workspace.py` 中的 `Workspace` 是唯一允许解析本地路径的对象。只读工具依赖 `Workspace`，Agent 只能通过 `ToolRegistry` 执行工具。
 
-The Agent supports a minimal JSON tool protocol. When the model response is a JSON object with `tool` and `args`, the Agent runs the tool, appends the result back into history, and calls the model again. When the model returns normal text, that text is treated as the final answer.
+Agent 支持一个最小 JSON 工具协议。当模型响应是包含 `tool` 和 `args` 的 JSON 对象时，Agent 执行对应工具，把工具结果追加回对话历史，并再次调用模型。当模型返回普通文本时，该文本被视为最终回答。
 
-## Tool Protocol
+## 工具协议
 
-The model must output one JSON object when it wants a tool:
+模型需要调用工具时，必须输出单个 JSON 对象：
 
 ```json
 {"tool": "list_files", "args": {"path": "."}}
 ```
 
-Supported tools:
+支持的工具请求示例：
 
 ```json
 {"tool": "read_file", "args": {"path": "README.md", "start_line": 1, "end_line": 80}}
@@ -45,11 +45,11 @@ Supported tools:
 {"tool": "search_text", "args": {"query": "main", "glob": "*.py"}}
 ```
 
-The Agent automatically stops if tool calls exceed `max_tool_iterations`.
+如果工具调用次数超过 `max_tool_iterations`，Agent 会自动停止。
 
-## Workspace Safety
+## 工作区安全
 
-All file paths are resolved under the workspace root. Attempts such as `../outside.txt` raise `WorkspaceAccessError`. Default ignored names include:
+所有文件路径都必须解析到工作区根目录之下。类似 `../outside.txt` 的越界访问会抛出 `WorkspaceAccessError`。默认忽略名称包括：
 
 - `.git`
 - `.codepilot`
@@ -59,19 +59,19 @@ All file paths are resolved under the workspace root. Attempts such as `../outsi
 - `__pycache__`
 - `.pytest_cache`
 
-## Task State
+## 任务状态
 
-When a new user goal arrives, `TaskState.start_goal()` creates a short default plan:
+收到新的用户目标时，`TaskState.start_goal()` 创建一个简短默认计划：
 
 1. 理解用户目标
 2. 读取必要项目上下文
 3. 基于真实上下文回答
 
-When the final answer is produced, `TaskState.mark_done()` marks the plan as done. `/status` and `/plan` read from the Agent task state.
+生成最终回答后，`TaskState.mark_done()` 会把计划标记为完成。`/status` 和 `/plan` 从 Agent 的任务状态读取输出。
 
-## Tests
+## 测试
 
-Covered by:
+测试覆盖：
 
 - `tests/test_task_state.py`
 - `tests/test_workspace.py`
@@ -79,7 +79,7 @@ Covered by:
 - `tests/test_agent.py`
 - `tests/test_interaction.py`
 
-Required verification:
+必须执行的验证命令：
 
 ```bash
 python3 -m pytest -q
@@ -87,19 +87,19 @@ python3 -m compileall -q src tests
 git diff --check
 ```
 
-## Acceptance Criteria
+## 验收标准
 
-- Workspace rejects paths outside the project root.
-- `list_files` returns project-relative paths and skips ignored directories.
-- `read_file` returns numbered line ranges.
-- `search_text` returns project-relative numbered matches.
-- Tool Registry reports unknown tools cleanly.
-- Agent can execute JSON tool requests and return a final answer.
-- `/status` and `/plan` show real task state instead of static placeholder text.
+- 工作区拒绝访问项目根目录之外的路径。
+- `list_files` 返回项目相对路径，并跳过忽略目录。
+- `read_file` 返回带行号的指定范围内容。
+- `search_text` 返回项目相对路径和带行号的匹配项。
+- `ToolRegistry` 能清晰报告未知工具。
+- Agent 可以执行 JSON 工具请求并返回最终回答。
+- `/status` 和 `/plan` 展示真实任务状态，而不是静态假数据文本。
 
-## Implementation Evidence
+## 实现证据
 
-Implemented in commit:
+已在以下提交中实现：
 
 ```text
 0d8d6f6 feat: implement conversation agent with tool execution capabilities and workspace integration

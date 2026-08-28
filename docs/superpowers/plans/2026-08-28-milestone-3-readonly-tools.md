@@ -1,42 +1,42 @@
-# Milestone 3 Read-Only Tools Implementation Plan
+# 里程碑 3：任务状态和只读工具实现计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **面向自动化执行者：** 必需子技能：使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 按任务逐项执行本计划。步骤使用 checkbox（`- [ ]`）语法追踪状态。
 
-**Goal:** Add task state, safe workspace access, read-only tools, and Agent tool execution so CodePilot can answer from real local context.
+**目标：** 增加任务状态、安全工作区访问、只读工具和 Agent 工具执行循环，让 CodePilot 可以基于真实本地上下文回答。
 
-**Architecture:** Introduce `TaskState`, `Workspace`, and a `tools` package. The Agent parses JSON tool requests, executes them through `ToolRegistry`, appends tool results into message history, and asks the LLM for the final answer.
+**架构：** 引入 `TaskState`、`Workspace` 和 `tools` 包。Agent 解析 JSON 工具请求，通过 `ToolRegistry` 执行工具，把工具结果追加到消息历史中，然后再次请求 LLM 生成最终回答。
 
-**Tech Stack:** Python 3.10 compatible standard library, dataclasses, pathlib, pytest.
+**技术栈：** 兼容 Python 3.10 的标准库、`dataclasses`、`pathlib`、pytest。
 
 ---
 
-## File Structure
+## 文件结构
 
-- Create: `src/codepilot/task_state.py`
-- Create: `src/codepilot/workspace.py`
-- Create: `src/codepilot/tools/base.py`
-- Create: `src/codepilot/tools/__init__.py`
-- Create: `src/codepilot/tools/list_files.py`
-- Create: `src/codepilot/tools/read_file.py`
-- Create: `src/codepilot/tools/search_text.py`
-- Modify: `src/codepilot/agent.py`
-- Modify: `src/codepilot/interaction.py`
-- Modify: `src/codepilot/cli.py`
-- Modify: `README.md`
-- Test: `tests/test_task_state.py`
-- Test: `tests/test_workspace.py`
-- Test: `tests/test_tools.py`
-- Test: `tests/test_agent.py`
-- Test: `tests/test_interaction.py`
+- 创建：`src/codepilot/task_state.py`
+- 创建：`src/codepilot/workspace.py`
+- 创建：`src/codepilot/tools/base.py`
+- 创建：`src/codepilot/tools/__init__.py`
+- 创建：`src/codepilot/tools/list_files.py`
+- 创建：`src/codepilot/tools/read_file.py`
+- 创建：`src/codepilot/tools/search_text.py`
+- 修改：`src/codepilot/agent.py`
+- 修改：`src/codepilot/interaction.py`
+- 修改：`src/codepilot/cli.py`
+- 修改：`README.md`
+- 测试：`tests/test_task_state.py`
+- 测试：`tests/test_workspace.py`
+- 测试：`tests/test_tools.py`
+- 测试：`tests/test_agent.py`
+- 测试：`tests/test_interaction.py`
 
-### Task 1: Task State
+### 任务 1：任务状态
 
-**Files:**
+**文件：**
 
-- Create: `src/codepilot/task_state.py`
-- Test: `tests/test_task_state.py`
+- 创建：`src/codepilot/task_state.py`
+- 测试：`tests/test_task_state.py`
 
-- [x] **Step 1: Write failing task state tests**
+- [x] **步骤 1：编写失败的任务状态测试**
 
 ```python
 def test_task_state_starts_goal_with_default_plan():
@@ -46,34 +46,34 @@ def test_task_state_starts_goal_with_default_plan():
     assert state.status == "running"
 ```
 
-- [x] **Step 2: Run test to verify it fails**
+- [x] **步骤 2：运行测试并确认失败**
 
 ```bash
 python3 -m pytest tests/test_task_state.py -q
 ```
 
-Expected: failure because `codepilot.task_state` does not exist.
+预期：测试失败，因为 `codepilot.task_state` 尚不存在。
 
-- [x] **Step 3: Implement task state**
+- [x] **步骤 3：实现任务状态**
 
-Implement `PlanStep`, `TaskState.start_goal()`, `set_plan()`, `mark_done()`, `render_status()`, and `render_plan()`.
+实现 `PlanStep`、`TaskState.start_goal()`、`set_plan()`、`mark_done()`、`render_status()` 和 `render_plan()`。
 
-- [x] **Step 4: Verify task state tests pass**
+- [x] **步骤 4：验证任务状态测试通过**
 
 ```bash
 python3 -m pytest tests/test_task_state.py -q
 ```
 
-Expected: task state tests pass.
+预期：任务状态测试通过。
 
-### Task 2: Workspace Safety
+### 任务 2：工作区安全
 
-**Files:**
+**文件：**
 
-- Create: `src/codepilot/workspace.py`
-- Test: `tests/test_workspace.py`
+- 创建：`src/codepilot/workspace.py`
+- 测试：`tests/test_workspace.py`
 
-- [x] **Step 1: Write failing workspace tests**
+- [x] **步骤 1：编写失败的工作区测试**
 
 ```python
 def test_workspace_resolve_path_rejects_parent_escape(tmp_path):
@@ -82,38 +82,38 @@ def test_workspace_resolve_path_rejects_parent_escape(tmp_path):
         workspace.resolve_path("../outside.txt")
 ```
 
-- [x] **Step 2: Run test to verify it fails**
+- [x] **步骤 2：运行测试并确认失败**
 
 ```bash
 python3 -m pytest tests/test_workspace.py -q
 ```
 
-Expected: failure because `codepilot.workspace` does not exist.
+预期：测试失败，因为 `codepilot.workspace` 尚不存在。
 
-- [x] **Step 3: Implement workspace access**
+- [x] **步骤 3：实现工作区访问**
 
-Implement `Workspace.resolve_path()`, `list_files()`, `read_file()`, and `search_text()`. Enforce root containment and ignored directory names.
+实现 `Workspace.resolve_path()`、`list_files()`、`read_file()` 和 `search_text()`。强制路径位于工作区根目录内，并忽略常见目录名。
 
-- [x] **Step 4: Verify workspace tests pass**
+- [x] **步骤 4：验证工作区测试通过**
 
 ```bash
 python3 -m pytest tests/test_workspace.py -q
 ```
 
-Expected: workspace tests pass.
+预期：工作区测试通过。
 
-### Task 3: Read-Only Tools and Registry
+### 任务 3：只读工具和注册表
 
-**Files:**
+**文件：**
 
-- Create: `src/codepilot/tools/base.py`
-- Create: `src/codepilot/tools/__init__.py`
-- Create: `src/codepilot/tools/list_files.py`
-- Create: `src/codepilot/tools/read_file.py`
-- Create: `src/codepilot/tools/search_text.py`
-- Test: `tests/test_tools.py`
+- 创建：`src/codepilot/tools/base.py`
+- 创建：`src/codepilot/tools/__init__.py`
+- 创建：`src/codepilot/tools/list_files.py`
+- 创建：`src/codepilot/tools/read_file.py`
+- 创建：`src/codepilot/tools/search_text.py`
+- 测试：`tests/test_tools.py`
 
-- [x] **Step 1: Write failing tool tests**
+- [x] **步骤 1：编写失败的工具测试**
 
 ```python
 def test_default_readonly_registry_executes_list_files(tmp_path):
@@ -123,34 +123,34 @@ def test_default_readonly_registry_executes_list_files(tmp_path):
     assert result.ok is True
 ```
 
-- [x] **Step 2: Run test to verify it fails**
+- [x] **步骤 2：运行测试并确认失败**
 
 ```bash
 python3 -m pytest tests/test_tools.py -q
 ```
 
-Expected: failure because `codepilot.tools` does not exist.
+预期：测试失败，因为 `codepilot.tools` 尚不存在。
 
-- [x] **Step 3: Implement tools**
+- [x] **步骤 3：实现工具**
 
-Implement `ToolResult`, `Tool` protocol, `ToolRegistry`, `default_readonly_registry()`, `ListFilesTool`, `ReadFileTool`, and `SearchTextTool`.
+实现 `ToolResult`、`Tool` 协议、`ToolRegistry`、`default_readonly_registry()`、`ListFilesTool`、`ReadFileTool` 和 `SearchTextTool`。
 
-- [x] **Step 4: Verify tool tests pass**
+- [x] **步骤 4：验证工具测试通过**
 
 ```bash
 python3 -m pytest tests/test_tools.py -q
 ```
 
-Expected: tool tests pass.
+预期：工具测试通过。
 
-### Task 4: Agent Tool Loop
+### 任务 4：Agent 工具循环
 
-**Files:**
+**文件：**
 
-- Modify: `src/codepilot/agent.py`
-- Test: `tests/test_agent.py`
+- 修改：`src/codepilot/agent.py`
+- 测试：`tests/test_agent.py`
 
-- [x] **Step 1: Write failing Agent tool-loop tests**
+- [x] **步骤 1：编写失败的 Agent 工具循环测试**
 
 ```python
 def test_conversation_agent_executes_tool_request_and_returns_final_answer(tmp_path):
@@ -161,94 +161,99 @@ def test_conversation_agent_executes_tool_request_and_returns_final_answer(tmp_p
     assert agent.respond("调用 echo 工具") == "工具结果是 hello"
 ```
 
-- [x] **Step 2: Run test to verify it fails**
+- [x] **步骤 2：运行测试并确认失败**
 
 ```bash
 python3 -m pytest tests/test_agent.py -q
 ```
 
-Expected: failure because the Agent does not parse or execute tool requests.
+预期：测试失败，因为 Agent 尚未解析和执行工具请求。
 
-- [x] **Step 3: Implement JSON tool protocol**
+- [x] **步骤 3：实现 JSON 工具协议**
 
-Implement `ToolRequest`, `parse_tool_request()`, `_extract_json_object()`, tool loop execution, session `tool_call` and `tool_result` events, and `max_tool_iterations`.
+实现 `ToolRequest`、`parse_tool_request()`、`_extract_json_object()`、工具循环执行、会话 `tool_call` 和 `tool_result` 事件，以及 `max_tool_iterations`。
 
-- [x] **Step 4: Verify Agent tool-loop tests pass**
+- [x] **步骤 4：验证 Agent 工具循环测试通过**
 
 ```bash
 python3 -m pytest tests/test_agent.py -q
 ```
 
-Expected: Agent tests pass.
+预期：Agent 测试通过。
 
-### Task 5: Dynamic Status and Plan Commands
+### 任务 5：动态状态和计划命令
 
-**Files:**
+**文件：**
 
-- Modify: `src/codepilot/interaction.py`
-- Modify: `src/codepilot/cli.py`
-- Test: `tests/test_interaction.py`
+- 修改：`src/codepilot/interaction.py`
+- 修改：`src/codepilot/cli.py`
+- 测试：`tests/test_interaction.py`
 
-- [x] **Step 1: Write failing interaction state tests**
+- [x] **步骤 1：编写失败的交互状态测试**
 
 ```python
 def test_interactive_session_status_reads_agent_task_state(tmp_path):
     inputs = iter(["帮我总结这个项目", "/status", "/plan", "/exit"])
-    session = InteractiveSession(workspace=tmp_path, input_reader=lambda: next(inputs), output=output, agent=agent)
+    session = InteractiveSession(
+        workspace=tmp_path,
+        input_reader=lambda: next(inputs),
+        output=output,
+        agent=agent,
+    )
     session.run()
     assert "当前状态：done；目标：帮我总结这个项目" in output.lines
 ```
 
-- [x] **Step 2: Run test to verify it fails**
+- [x] **步骤 2：运行测试并确认失败**
 
 ```bash
 python3 -m pytest tests/test_interaction.py -q
 ```
 
-Expected: failure while `/status` and `/plan` still return static strings.
+预期：测试失败，因为 `/status` 和 `/plan` 仍返回静态文本。
 
-- [x] **Step 3: Wire status and plan to Agent**
+- [x] **步骤 3：把状态和计划接入 Agent**
 
-Expose `ConversationAgent.status` and `ConversationAgent.plan`. Update `InteractiveSession._handle_command()` to read those properties. Pass workspace into `create_default_agent()`.
+暴露 `ConversationAgent.status` 和 `ConversationAgent.plan`。更新 `InteractiveSession._handle_command()`，让它读取这些属性。创建默认 Agent 时传入工作区。
 
-- [x] **Step 4: Verify interaction tests pass**
+- [x] **步骤 4：验证交互测试通过**
 
 ```bash
 python3 -m pytest tests/test_interaction.py -q
 ```
 
-Expected: interaction tests pass.
+预期：交互测试通过。
 
-### Task 6: CLI and Documentation
+### 任务 6：CLI 和文档
 
-**Files:**
+**文件：**
 
-- Modify: `src/codepilot/cli.py`
-- Modify: `README.md`
+- 修改：`src/codepilot/cli.py`
+- 修改：`README.md`
 
-- [x] **Step 1: Ensure default Agent has read-only tools**
+- [x] **步骤 1：确保默认 Agent 拥有只读工具**
 
-Update `create_default_agent(config, workspace=workspace_path)` usage so CLI-created agents receive a `Workspace` and `default_readonly_registry()`.
+更新 `create_default_agent(config, workspace=workspace_path)` 的使用方式，让 CLI 创建的 Agent 获得 `Workspace` 和 `default_readonly_registry()`。
 
-- [x] **Step 2: Document read-only tools**
+- [x] **步骤 2：记录只读工具能力**
 
-Add a README line describing the JSON tool request support for `list_files`, `read_file`, and `search_text`.
+在 README 中说明 `list_files`、`read_file` 和 `search_text` 的 JSON 工具请求支持。
 
-- [x] **Step 3: Verify CLI help still works**
+- [x] **步骤 3：验证 CLI 帮助仍正常**
 
 ```bash
 env PYTHONPATH=src python3 -m codepilot --help
 ```
 
-Expected: CLI help renders.
+预期：CLI 帮助可以正常渲染。
 
-### Task 7: Commit Milestone 3
+### 任务 7：提交里程碑 3
 
-**Files:**
+**文件：**
 
-- Commit all files created or modified in this plan.
+- 提交本计划创建或修改的全部文件。
 
-- [x] **Step 1: Run full verification**
+- [x] **步骤 1：运行完整验证**
 
 ```bash
 python3 -m pytest -q
@@ -256,21 +261,21 @@ python3 -m compileall -q src tests
 git diff --check
 ```
 
-Expected: all checks pass.
+预期：全部检查通过。
 
-- [x] **Step 2: Verify local fake tool loop**
+- [x] **步骤 2：验证本地假工具循环**
 
 ```bash
 env PYTHONPATH=src python3 -c "from codepilot.agent import ConversationAgent; print('tool loop verified by tests')"
 ```
 
-Expected: command exits with code 0.
+预期：命令退出码为 0。
 
-- [x] **Step 3: Commit**
+- [x] **步骤 3：提交**
 
 ```bash
 git add README.md src tests
 git commit -m "feat: implement conversation agent with tool execution capabilities and workspace integration"
 ```
 
-Expected: commit `0d8d6f6` or equivalent milestone commit is created.
+预期：创建提交 `0d8d6f6` 或等价的里程碑提交。

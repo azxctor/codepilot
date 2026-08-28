@@ -1,42 +1,42 @@
-# Milestone 1 CLI Shell Design
+# 里程碑 1：基础 CLI 和交互壳设计
 
-## Goal
+## 目标
 
-Build the first usable CodePilot command-line shell. The milestone creates the Python package skeleton, a `codepilot` executable entrypoint, local workspace initialization, and a minimal interactive prompt loop.
+构建 CodePilot 的第一个可运行命令行壳。该里程碑负责建立 Python 包结构、`codepilot` 可执行入口、本地工作区初始化能力，以及最小可用的交互式提示循环。
 
-## Scope
+## 范围
 
-This milestone covers:
+本里程碑包含：
 
 - `codepilot --help`
 - `codepilot init`
 - `codepilot`
 - `codepilot chat`
-- `/status`, `/plan`, and `/exit`
-- `.codepilot/config.toml` creation
-- `.codepilot/sessions/` directory creation
+- `/status`、`/plan`、`/exit`
+- 创建 `.codepilot/config.toml`
+- 创建 `.codepilot/sessions/` 目录
 
-This milestone does not call an LLM, read project files through tools, write files, execute shell commands, or resume old sessions.
+本里程碑不包含 LLM 调用、通过工具读取项目文件、写文件、执行 shell 命令，或恢复历史会话。
 
-## Architecture
+## 架构
 
-The CLI starts in `src/codepilot/cli.py` and delegates interactive behavior to `src/codepilot/interaction.py`. Configuration creation and loading live in `src/codepilot/config.py`. Slash commands are parsed by `src/codepilot/commands.py`.
+CLI 从 `src/codepilot/cli.py` 启动，并把交互行为委托给 `src/codepilot/interaction.py`。配置创建和加载逻辑放在 `src/codepilot/config.py`。斜杠命令解析由 `src/codepilot/commands.py` 负责。
 
-The implementation intentionally uses Python standard library `argparse` for the first shell because the local runtime did not have Typer and Rich installed. The package still declares the planned dependencies in `pyproject.toml` so later milestones can adopt them without changing the command surface.
+首个交互壳刻意使用 Python 标准库 `argparse`，因为本地运行环境没有预装 Typer 和 Rich。`pyproject.toml` 仍然声明了后续规划依赖，后续里程碑可以在不改变命令形态的前提下接入它们。
 
-## Components
+## 组件
 
-- `pyproject.toml`: package metadata, console script, pytest config.
-- `README.md`: local usage notes.
-- `src/codepilot/__main__.py`: enables `python3 -m codepilot`.
-- `src/codepilot/cli.py`: command parser and top-level dispatch.
-- `src/codepilot/config.py`: workspace config creation and loading.
-- `src/codepilot/commands.py`: slash command parsing.
-- `src/codepilot/interaction.py`: interactive prompt loop and basic command handling.
+- `pyproject.toml`：包元数据、控制台脚本、pytest 配置。
+- `README.md`：本地使用说明。
+- `src/codepilot/__main__.py`：支持 `python3 -m codepilot`。
+- `src/codepilot/cli.py`：命令解析和顶层分发。
+- `src/codepilot/config.py`：工作区配置创建和加载。
+- `src/codepilot/commands.py`：斜杠命令解析。
+- `src/codepilot/interaction.py`：交互式提示循环和基础命令处理。
 
-## Behavior
+## 行为
 
-`codepilot init` creates:
+`codepilot init` 创建：
 
 ```text
 .codepilot/
@@ -44,22 +44,22 @@ The implementation intentionally uses Python standard library `argparse` for the
   sessions/
 ```
 
-`codepilot` and `codepilot chat` start an interactive loop. Empty input is ignored. `/status` shows the idle state, `/plan` shows that no task plan exists, and `/exit` exits cleanly. Normal text input reports that the LLM Agent is not yet connected in this milestone.
+`codepilot` 和 `codepilot chat` 进入同一个交互循环。空输入会被忽略。`/status` 显示空闲状态，`/plan` 显示当前还没有任务计划，`/exit` 干净退出。普通文本输入会提示本里程碑尚未接入 LLM Agent。
 
-## Configuration
+## 配置
 
-The generated config stores only non-secret defaults. API keys are never written into `.codepilot/config.toml`.
+生成的配置文件只保存非敏感默认值。API Key 不会写入 `.codepilot/config.toml`。
 
-## Tests
+## 测试
 
-Covered by:
+测试覆盖：
 
 - `tests/test_config.py`
 - `tests/test_commands.py`
 - `tests/test_interaction.py`
 - `tests/test_cli.py`
 
-Required verification:
+必须执行的验证命令：
 
 ```bash
 python3 -m pytest -q
@@ -67,17 +67,17 @@ env PYTHONPATH=src python3 -m codepilot --help
 env PYTHONPATH=src python3 -m codepilot chat
 ```
 
-## Acceptance Criteria
+## 验收标准
 
-- `codepilot --help` prints available commands.
-- `codepilot init` creates `.codepilot/config.toml` and `.codepilot/sessions/`.
-- `codepilot` enters the same interactive shell as `codepilot chat`.
-- `/exit` exits without an exception.
-- `/status` and `/plan` return stable shell output.
+- `codepilot --help` 能打印可用命令。
+- `codepilot init` 能创建 `.codepilot/config.toml` 和 `.codepilot/sessions/`。
+- `codepilot` 能进入与 `codepilot chat` 相同的交互壳。
+- `/exit` 能无异常退出。
+- `/status` 和 `/plan` 返回稳定的交互壳输出。
 
-## Implementation Evidence
+## 实现证据
 
-Implemented in commit:
+已在以下提交中实现：
 
 ```text
 29cc437 feat: add initial interactive cli shell

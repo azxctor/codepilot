@@ -1,66 +1,66 @@
-# Milestone 2 LLM Conversation Design
+# 里程碑 2：LLM 交互式对话设计
 
-## Goal
+## 目标
 
-Connect the interactive CLI shell to an OpenAI-compatible LLM so that `codepilot chat` and `codepilot run "<task>"` can send user messages to Kimi and persist conversation events.
+把交互式 CLI 壳连接到兼容 OpenAI 协议的 LLM，使 `codepilot chat` 和 `codepilot run "<task>"` 能把用户消息发送给 Kimi，并持久化对话事件。
 
-## Scope
+## 范围
 
-This milestone covers:
+本里程碑包含：
 
-- OpenAI-compatible `/chat/completions` requests.
-- Default Kimi Coding endpoint: `https://api.kimi.com/coding/v1`.
-- Default model: `kimi-k3`.
-- API key lookup from `MOONSHOT_API_KEY`.
-- Legacy fallback to `CODEPILOT_API_KEY`.
-- JSONL session event storage.
-- `codepilot doctor` for masked local diagnostics.
-- SSL CA handling for Python `urllib` fallback.
+- 兼容 OpenAI 的 `/chat/completions` 请求。
+- 默认 Kimi Coding 端点：`https://api.kimi.com/coding/v1`。
+- 默认模型：`kimi-k3`。
+- 从 `MOONSHOT_API_KEY` 读取 API Key。
+- 兼容旧的 `CODEPILOT_API_KEY` 兜底环境变量。
+- JSONL 会话事件存储。
+- `codepilot doctor` 掩码诊断。
+- Python `urllib` 兜底路径的 SSL CA 处理。
 
-This milestone does not implement tool calling, file reads, shell execution, approvals, streaming output, or session resume.
+本里程碑不包含工具调用、文件读取、shell 执行、用户审批、流式输出，或恢复历史会话。
 
-## Architecture
+## 架构
 
-`ConversationAgent` in `src/codepilot/agent.py` receives user text and delegates model calls to `OpenAICompatibleLLM` in `src/codepilot/llm.py`. The agent appends user and assistant events to `SessionStore` in `src/codepilot/session.py`.
+`src/codepilot/agent.py` 中的 `ConversationAgent` 接收用户文本，并把模型调用委托给 `src/codepilot/llm.py` 中的 `OpenAICompatibleLLM`。Agent 会把用户事件和助手事件追加写入 `src/codepilot/session.py` 中的 `SessionStore`。
 
-The LLM provider supports two transport paths. If `httpx` is installed it is used. If not, the provider falls back to `urllib` and creates an explicit SSL context with `CODEPILOT_CA_BUNDLE`, `SSL_CERT_FILE`, or `certifi`.
+LLM Provider 支持两条传输路径。如果安装了 `httpx`，优先使用 `httpx`；否则回退到 `urllib`，并通过 `CODEPILOT_CA_BUNDLE`、`SSL_CERT_FILE` 或 `certifi` 创建显式 SSL 上下文。
 
-## Components
+## 组件
 
-- `src/codepilot/llm.py`: chat message model, key resolution, HTTP transport, error mapping.
-- `src/codepilot/agent.py`: conversation history and model response orchestration.
-- `src/codepilot/session.py`: JSONL event writer and reader.
-- `src/codepilot/diagnostics.py`: local config and masked API key report.
-- `src/codepilot/cli.py`: `run` command and `doctor` command integration.
-- `src/codepilot/interaction.py`: natural language input routes to the agent.
+- `src/codepilot/llm.py`：聊天消息模型、Key 解析、HTTP 传输、错误映射。
+- `src/codepilot/agent.py`：对话历史和模型响应编排。
+- `src/codepilot/session.py`：JSONL 事件写入与读取。
+- `src/codepilot/diagnostics.py`：本地配置与 API Key 掩码报告。
+- `src/codepilot/cli.py`：集成 `run` 命令和 `doctor` 命令。
+- `src/codepilot/interaction.py`：把自然语言输入路由给 Agent。
 
-## API Key Policy
+## API Key 策略
 
-Secrets are never stored in committed files. The active key is read from environment variables in this order:
+密钥绝不写入已提交文件。运行时按以下顺序读取有效 Key：
 
-1. Configured `api_key_env`
-2. `MOONSHOT_API_KEY`
-3. `CODEPILOT_API_KEY`
+1. 配置项 `api_key_env` 指定的环境变量。
+2. `MOONSHOT_API_KEY`。
+3. `CODEPILOT_API_KEY`。
 
-Placeholder values, extra quotes, and surrounding whitespace are handled before a request is sent.
+发送请求前会处理无效示例值、多余引号和首尾空白。
 
-## Error Handling
+## 错误处理
 
-- Missing API key returns a clear local error.
-- Placeholder API key returns a clear local error.
-- HTTP 401 returns an authentication-specific error.
-- SSL verification issues are mitigated by explicit CA context creation.
-- Invalid response shape raises `LLMRequestError`.
+- 缺少 API Key 时返回清晰的本地错误。
+- API Key 是无效示例值时返回清晰的本地错误。
+- HTTP 401 返回认证专用错误。
+- 通过显式 CA 上下文缓解 SSL 校验问题。
+- 响应结构无效时抛出 `LLMRequestError`。
 
-## Behavior
+## 行为
 
-`codepilot run "你好"` sends a single message through the same `ConversationAgent` used by chat. `codepilot chat` keeps a process-local message history for the current session and writes JSONL events.
+`codepilot run "你好"` 通过与 chat 相同的 `ConversationAgent` 发送单条消息。`codepilot chat` 在当前进程内维护会话历史，并把事件写入 JSONL。
 
-`codepilot doctor` prints endpoint, model, configured key env, active key env, and a masked key preview. It never prints the full key.
+`codepilot doctor` 输出端点、模型、配置的 Key 环境变量、实际命中的 Key 环境变量，以及掩码后的 Key 预览。它绝不会输出完整密钥。
 
-## Tests
+## 测试
 
-Covered by:
+测试覆盖：
 
 - `tests/test_llm.py`
 - `tests/test_agent.py`
@@ -70,7 +70,7 @@ Covered by:
 - `tests/test_interaction.py`
 - `tests/test_config.py`
 
-Required verification:
+必须执行的验证命令：
 
 ```bash
 python3 -m pytest -q
@@ -79,19 +79,19 @@ git diff --check
 env PYTHONPATH=src python3 -m codepilot doctor
 ```
 
-## Acceptance Criteria
+## 验收标准
 
-- `codepilot run "<task>"` routes text to `ConversationAgent`.
-- `codepilot chat` routes normal text to `ConversationAgent`.
-- LLM requests target `https://api.kimi.com/coding/v1/chat/completions`.
-- API key lookup uses `MOONSHOT_API_KEY` by default.
-- Session JSONL contains user and assistant events.
-- `doctor` reports config and masked secret state.
-- SSL path no longer fails when Python default CA store is incomplete but `certifi` is available.
+- `codepilot run "<task>"` 把文本路由到 `ConversationAgent`。
+- `codepilot chat` 把普通文本路由到 `ConversationAgent`。
+- LLM 请求目标为 `https://api.kimi.com/coding/v1/chat/completions`。
+- 默认从 `MOONSHOT_API_KEY` 读取 API Key。
+- 会话 JSONL 包含用户事件和助手事件。
+- `doctor` 能报告配置和掩码后的密钥状态。
+- 当 Python 默认 CA Store 不完整但 `certifi` 可用时，SSL 路径不再失败。
 
-## Implementation Evidence
+## 实现证据
 
-Implemented in commit:
+已在以下提交中实现：
 
 ```text
 6ad0b9d feat: add kimi llm conversation support
