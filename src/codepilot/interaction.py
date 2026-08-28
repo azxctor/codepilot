@@ -20,6 +20,9 @@ class PlainOutput:
 
 
 class Agent(Protocol):
+    status: str
+    plan: str
+
     def respond(self, message: str) -> str:
         ...
 
@@ -43,7 +46,7 @@ class InteractiveSession:
         self.config = config or load_config(self.workspace)
         self.input_reader = input_reader or self._prompt
         self.output = output or PlainOutput()
-        self.agent = agent or create_default_agent(self.config)
+        self.agent = agent or create_default_agent(self.config, workspace=self.workspace)
         self._turns = 0
 
     def run(self) -> InteractionResult:
@@ -76,11 +79,11 @@ class InteractiveSession:
             return True
 
         if command.name == "status":
-            self.output.write("当前状态：idle")
+            self.output.write(self.agent.status)
             return False
 
         if command.name == "plan":
-            self.output.write("当前计划：暂无任务计划")
+            self.output.write(self.agent.plan)
             return False
 
         self.output.write(f"未知命令：/{command.name}")

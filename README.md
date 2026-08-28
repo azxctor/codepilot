@@ -9,6 +9,7 @@ Current milestone:
 - `/status`, `/plan`, and `/exit` are available in the shell.
 - `codepilot run "<task>"` sends one task through the same conversation agent.
 - The default OpenAI-compatible endpoint is Kimi Coding at `https://api.kimi.com/coding/v1` with model `kimi-k3`.
+- The conversation agent can execute read-only workspace tools through JSON tool requests: `list_files`, `read_file`, and `search_text`.
 
 Before using the LLM locally, set the API key in your shell:
 

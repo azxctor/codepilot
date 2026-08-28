@@ -13,6 +13,9 @@ from codepilot.interaction import InteractiveSession, Output, PlainOutput
 
 
 class Agent(Protocol):
+    status: str
+    plan: str
+
     def respond(self, message: str) -> str:
         ...
 
@@ -85,7 +88,7 @@ def run_cli(
             return 2
 
         config = load_config(workspace_path)
-        active_agent = agent or create_default_agent(config)
+        active_agent = agent or create_default_agent(config, workspace=workspace_path)
         out.write(active_agent.respond(task))
         return 0
 
