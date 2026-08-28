@@ -9,6 +9,15 @@ class FakeOutput:
         self.lines.append(message)
 
 
+class FakeAgent:
+    def __init__(self) -> None:
+        self.messages: list[str] = []
+
+    def respond(self, message: str) -> str:
+        self.messages.append(message)
+        return f"模型回复：{message}"
+
+
 def test_interactive_session_exits_on_exit_command(tmp_path) -> None:
     output = FakeOutput()
     session = InteractiveSession(
@@ -41,12 +50,15 @@ def test_interactive_session_handles_status_command(tmp_path) -> None:
 def test_interactive_session_handles_regular_text_without_llm(tmp_path) -> None:
     inputs = iter(["帮我总结这个项目", "/exit"])
     output = FakeOutput()
+    agent = FakeAgent()
     session = InteractiveSession(
         workspace=tmp_path,
         input_reader=lambda: next(inputs),
         output=output,
+        agent=agent,
     )
 
     session.run()
 
-    assert any("LLM Agent 尚未接入" in line for line in output.lines)
+    assert agent.messages == ["帮我总结这个项目"]
+    assert any("模型回复：帮我总结这个项目" in line for line in output.lines)

@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Callable, Mapping, Protocol, Sequence
 
+from codepilot.agent import create_default_agent
 from codepilot.config import initialize_workspace_config, load_config
+from codepilot.diagnostics import build_doctor_report
 from codepilot.interaction import InteractiveSession, Output, PlainOutput
+
+
+class Agent(Protocol):
+    def respond(self, message: str) -> str:
+        ...
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -17,11 +25,12 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("init", help="Create .codepilot/config.toml in the current workspace.")
+    subparsers.add_parser("doctor", help="Show local configuration and masked API key diagnostics.")
 
     chat_parser = subparsers.add_parser("chat", help="Start an interactive CodePilot session.")
     chat_parser.add_argument("--resume", default=None, help="Reserved for a later milestone.")
 
-    run_parser = subparsers.add_parser("run", help="Reserved shortcut command for a later milestone.")
+    run_parser = subparsers.add_parser("run", help="Send one task through the conversation agent.")
     run_parser.add_argument("task", nargs="*", help="Task text.")
 
     return parser
@@ -32,10 +41,13 @@ def run_cli(
     workspace: Path | None = None,
     input_reader: Callable[[], str] | None = None,
     output: Output | None = None,
+    agent: Agent | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> int:
     args_list = list(argv) if argv is not None else sys.argv[1:]
     workspace_path = (workspace or Path.cwd()).resolve()
     out = output or PlainOutput()
+    active_env = env if env is not None else os.environ
 
     parser = build_parser()
     try:
@@ -48,6 +60,12 @@ def run_cli(
         out.write(f"初始化完成：{target}")
         return 0
 
+    if args.command == "doctor":
+        config = load_config(workspace_path)
+        for line in build_doctor_report(config, active_env):
+            out.write(line)
+        return 0
+
     if args.command in {None, "chat"}:
         config = load_config(workspace_path)
         session = InteractiveSession(
@@ -55,12 +73,20 @@ def run_cli(
             input_reader=input_reader,
             output=out,
             config=config,
+            agent=agent,
         )
         session.run()
         return 0
 
     if args.command == "run":
-        out.write("run 快捷命令将在后续 Milestone 接入 Agent Loop。请先使用 codepilot chat。")
+        task = " ".join(args.task).strip()
+        if not task:
+            out.write('run 需要任务文本，例如：codepilot run "总结这个项目"')
+            return 2
+
+        config = load_config(workspace_path)
+        active_agent = agent or create_default_agent(config)
+        out.write(active_agent.respond(task))
         return 0
 
     parser.print_help()

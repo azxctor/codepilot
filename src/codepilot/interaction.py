@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Protocol
 
+from codepilot.agent import create_default_agent
 from codepilot.commands import SlashCommand, parse_slash_command
 from codepilot.config import CodePilotConfig, load_config
 
@@ -16,6 +17,11 @@ class Output(Protocol):
 class PlainOutput:
     def write(self, message: str) -> None:
         print(message)
+
+
+class Agent(Protocol):
+    def respond(self, message: str) -> str:
+        ...
 
 
 @dataclass(frozen=True)
@@ -31,11 +37,13 @@ class InteractiveSession:
         input_reader: Callable[[], str] | None = None,
         output: Output | None = None,
         config: CodePilotConfig | None = None,
+        agent: Agent | None = None,
     ) -> None:
         self.workspace = workspace.resolve()
         self.config = config or load_config(self.workspace)
         self.input_reader = input_reader or self._prompt
         self.output = output or PlainOutput()
+        self.agent = agent or create_default_agent(self.config)
         self._turns = 0
 
     def run(self) -> InteractionResult:
@@ -60,10 +68,7 @@ class InteractiveSession:
                     return InteractionResult(exit_requested=True, turns=self._turns)
                 continue
 
-            self.output.write(
-                "LLM Agent 尚未接入。当前 Milestone 1 只提供交互壳；"
-                "后续会在这里接入任务计划、工具调用和确认流程。"
-            )
+            self.output.write(self.agent.respond(text))
 
     def _handle_command(self, command: SlashCommand) -> bool:
         if command.name == "exit":

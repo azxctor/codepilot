@@ -9,6 +9,7 @@ from typing import Any
 class CodePilotConfig:
     default_model: str
     api_base_url: str
+    api_key_env: str
     allow_write: str
     allow_shell: str
     max_tool_iterations: int
@@ -19,8 +20,9 @@ class CodePilotConfig:
 
 
 DEFAULT_CONFIG = CodePilotConfig(
-    default_model="gpt-4.1-mini",
-    api_base_url="https://api.openai.com/v1",
+    default_model="kimi-k3",
+    api_base_url="https://api.kimi.com/coding/v1",
+    api_key_env="MOONSHOT_API_KEY",
     allow_write="ask",
     allow_shell="ask",
     max_tool_iterations=8,
@@ -62,6 +64,7 @@ def load_config(workspace: Path) -> CodePilotConfig:
         DEFAULT_CONFIG,
         default_model=str(values.get("default_model", DEFAULT_CONFIG.default_model)),
         api_base_url=str(values.get("api_base_url", DEFAULT_CONFIG.api_base_url)),
+        api_key_env=str(values.get("api_key_env", DEFAULT_CONFIG.api_key_env)),
         allow_write=str(values.get("allow_write", DEFAULT_CONFIG.allow_write)),
         allow_shell=str(values.get("allow_shell", DEFAULT_CONFIG.allow_shell)),
         max_tool_iterations=int(values.get("max_tool_iterations", DEFAULT_CONFIG.max_tool_iterations)),
@@ -77,8 +80,10 @@ def _render_config(config: CodePilotConfig) -> str:
     return "\n".join(
         [
             '# CodePilot workspace configuration',
+            '# Store the actual key in your shell environment, not in this file.',
             f'default_model = "{config.default_model}"',
             f'api_base_url = "{config.api_base_url}"',
+            f'api_key_env = "{config.api_key_env}"',
             f'allow_write = "{config.allow_write}"',
             f'allow_shell = "{config.allow_shell}"',
             f"max_tool_iterations = {config.max_tool_iterations}",
